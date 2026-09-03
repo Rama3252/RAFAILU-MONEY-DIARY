@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="sw">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="description" content="RAFAILU'S MONEY DIARY - Personal income and expense tracker">
+<link rel="manifest" href="manifest.json">
+<title>RAFAILU'S MONEY DIARY</title>
+<style>
+:root{--bg:#f1f5f9;--card:#fff;--text:#0f172a;--muted:#64748b;--primary:#0f172a;--line:#e2e8f0;--green:#15803d;--red:#b91c1c}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit}button{cursor:pointer}.app{max-width:520px;margin:auto;min-height:100vh;background:var(--bg)}
+header{position:sticky;top:0;z-index:5;background:var(--primary);color:white;padding:18px 18px 14px;box-shadow:0 2px 10px #0002}
+.brand{font-weight:800;font-size:20px}.sub{font-size:12px;opacity:.7;margin-top:3px}
+main{padding:16px 16px 92px}.screen{display:none}.screen.active{display:block}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 2px 8px #00000008}.wide{grid-column:1/-1}
+.label{font-size:12px;color:var(--muted)}.amount{font-size:21px;font-weight:800;margin-top:5px}.green{color:var(--green)}.red{color:var(--red)}
+h2{font-size:18px;margin:4px 0 14px}.section-title{display:flex;justify-content:space-between;align-items:center;margin:20px 0 10px}
+form{display:grid;gap:10px}.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input,select,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:11px;background:#fff;outline:none}input:focus,select:focus,textarea:focus{border-color:#64748b}
+.btn{border:0;border-radius:11px;padding:12px 14px;background:var(--primary);color:white;font-weight:700}.btn.secondary{background:#e2e8f0;color:var(--text)}.btn.danger{background:#fee2e2;color:#991b1b}.btn.small{padding:8px 10px;font-size:12px}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.tx{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line)}.tx:last-child{border-bottom:0}.tx-name{font-weight:700}.tx-meta{font-size:11px;color:var(--muted);margin-top:3px}
+nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid var(--line);z-index:10;padding:7px 5px calc(7px + env(safe-area-inset-bottom))}
+nav button{border:0;background:transparent;color:var(--muted);font-size:11px;padding:7px 2px;border-radius:10px}nav button.active{background:#e2e8f0;color:var(--text);font-weight:800}
+.lock{position:fixed;inset:0;background:#0f172a;z-index:99;display:flex;align-items:center;justify-content:center;padding:20px}.lockbox{width:min(380px,100%);background:#fff;border-radius:20px;padding:25px;text-align:center}.lockbox h1{font-size:24px;margin:0 0 5px}.pin{font-size:26px;text-align:center;letter-spacing:7px}
+.empty{padding:24px;text-align:center;color:var(--muted)}.hint{font-size:12px;color:var(--muted);line-height:1.5}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px;border-bottom:1px solid var(--line);text-align:left}
+canvas{width:100%;height:230px;background:#fff;border:1px solid var(--line);border-radius:14px}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:10px}
+@media(min-width:700px){body{padding:20px}.app{border-radius:22px;overflow:hidden;box-shadow:0 8px 35px #0002}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div class="brand">RAFAILU'S MONEY DIARY</div><div class="sub">Mapato • Matumizi • Salio</div></header>
+<main>
+<section id="home" class="screen active">
+<h2>Dashboard</h2>
+<div class="cards">
+<div class="card"><div class="label">Mapato</div><div id="incomeTotal" class="amount green">TZS 0</div></div>
+<div class="card"><div class="label">Matumizi</div><div id="expenseTotal" class="amount red">TZS 0</div></div>
+<div class="card wide"><div class="label">Salio</div><div id="balanceTotal" class="amount">TZS 0</div></div>
+</div>
+<div class="section-title"><h2>Graph</h2><span class="hint">Miezi 6 ya mwisho</span></div>
+<canvas id="chart" width="900" height="420"></canvas>
+<div class="section-title"><h2>Miamala ya karibuni</h2><button class="btn small" onclick="show('transactions')">Angalia yote</button></div>
+<div id="recent"></div>
+</section>
+
+<section id="transactions" class="screen">
+<h2>Miamala</h2>
+<div class="card">
+<form id="txForm">
+<div class="row"><select id="type"><option value="income">Mapato</option><option value="expense">Matumizi</option></select><input id="amount" type="number" min="0" step="0.01" placeholder="Kiasi (TZS)" required></div>
+<div class="row"><input id="category" placeholder="Kundi, mfano Mshahara" required><input id="date" type="date" required></div>
+<input id="note" placeholder="Maelezo (optional)">
+<button class="btn">Ongeza muamala</button>
+<button type="button" class="btn secondary" id="voiceBtn">🎙️ Andika kwa sauti</button>
+<div id="voiceStatus" class="hint"></div>
+</form>
+</div>
+<div class="section-title"><h2>Orodha</h2><input id="search" placeholder="Tafuta..." style="max-width:170px"></div>
+<div id="txList"></div>
+</section>
+
+<section id="reports" class="screen">
+<h2>Ripoti</h2>
+<div class="cards">
+<div class="card"><div class="label">Jumla ya mapato</div><div id="rIncome" class="amount green">TZS 0</div></div>
+<div class="card"><div class="label">Jumla ya matumizi</div><div id="rExpense" class="amount red">TZS 0</div></div>
+<div class="card wide"><div class="label">Salio</div><div id="rBalance" class="amount">TZS 0</div></div>
+</div>
+<div class="section-title"><h2>Muhtasari wa makundi</h2></div>
+<div class="card"><table><thead><tr><th>Kundi</th><th>Mapato</th><th>Matumizi</th></tr></thead><tbody id="categoryTable"></tbody></table></div>
+<div class="section-title"><h2>Export / Print</h2></div>
+<div class="actions"><button class="btn" onclick="exportCSV()">📥 Export CSV</button><button class="btn" onclick="printPDF()">🖨️ Save/Print PDF</button></div>
+<p class="hint">Kwa PDF, chagua “Save as PDF” kwenye print dialog ya simu au computer.</p>
+</section>
+
+<section id="settings" class="screen">
+<h2>Settings</h2>
+<div class="card">
+<h3>👤 Profile</h3>
+<form id="profileForm"><input id="profileName" placeholder="Jina"><input id="profileCurrency" value="TZS" placeholder="Currency"><button class="btn">Hifadhi profile</button></form>
+</div>
+<br>
+<div class="card">
+<h3>🔐 PIN</h3>
+<form id="pinForm"><input id="newPin" class="pin" inputmode="numeric" maxlength="8" placeholder="PIN mpya" required><button class="btn">Badili PIN</button></form>
+</div>
+<br>
+<div class="card">
+<h3>💾 Backup / Restore</h3>
+<div class="actions"><button class="btn" onclick="backup()">💾 Backup</button><button class="btn secondary" onclick="document.getElementById('restoreFile').click()">↩️ Restore</button><input id="restoreFile" type="file" accept=".json" hidden></div>
+<p class="hint">Backup huhifadhi profile, PIN na miamala. Usishiriki faili la backup na mtu usiyemwamini.</p>
+</div>
+<br>
+<div class="card">
+<h3>⚠️ Data</h3><button class="btn danger" onclick="clearAll()">Futa data yote</button>
+</div>
+<footer>RAFAILU'S MONEY DIARY</footer>
+</section>
+</main>
+<nav>
+<button class="active" data-screen="home">🏠<br>Home</button>
+<button data-screen="transactions">📋<br>Miamala</button>
+<button data-screen="reports">📈<br>Ripoti</button>
+<button data-screen="settings">⚙️<br>Settings</button>
+</nav>
+</div>
+
+<div id="lock" class="lock">
+<div class="lockbox"><h1>RAFAILU'S MONEY DIARY</h1><p class="hint" id="lockText">Weka PIN kuingia</p><input id="loginPin" class="pin" inputmode="numeric" maxlength="8" placeholder="••••"><br><br><button class="btn" style="width:100%" onclick="unlock()">Ingia</button><p id="pinError" class="hint"></p></div>
+</div>
+
+<script>
+const KEY='ra_failu_money_diary_v1';
+let db=JSON.parse(localStorage.getItem(KEY)||'null')||{pin:null,profile:{name:'',currency:'TZS'},transactions:[]};
+let current='home';
+const $=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat('en-TZ',{minimumFractionDigits:0,maximumFractionDigits:2}).format(n)+' '+(db.profile.currency||'TZS');
+function save(){localStorage.setItem(KEY,JSON.stringify(db));}
+function show(id){
+ current=id; document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id===id));
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.screen===id));
+ render();
+}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.screen));
+function totals(){let i=0,e=0;db.transactions.forEach(t=>t.type==='income'?i+=+t.amount:e+=+t.amount);return{i,e,b:i-e}}
+function render(){
+ const t=totals(); $('incomeTotal').textContent=money(t.i);$('expenseTotal').textContent=money(t.e);$('balanceTotal').textContent=money(t.b);
+ $('rIncome').textContent=money(t.i);$('rExpense').textContent=money(t.e);$('rBalance').textContent=money(t.b);
+ const q=[...db.transactions].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id);
+ $('recent').innerHTML=q.slice(0,5).map(txHTML).join('')||'<div class="empty">Hakuna miamala bado.</div>';
+ renderList(q); renderReport(); drawChart();
+ $('profileName').value=db.profile.name||'';$('profileCurrency').value=db.profile.currency||'TZS';
+}
+function txHTML(t){return `<div class="tx"><div><div class="tx-name">${esc(t.category)}</div><div class="tx-meta">${t.date}${t.note?' • '+esc(t.note):''}</div></div><div style="display:flex;gap:8px;align-items:center"><b class="${t.type==='income'?'green':'red'}">${t.type==='income'?'+':'-'} ${money(+t.amount)}</b><button class="btn danger small" onclick="delTx(${t.id})">✕</button></div></div>`}
+function renderList(q){
+ const term=($('search').value||'').toLowerCase(); q=q.filter(t=>(t.category+' '+(t.note||'')).toLowerCase().includes(term));
+ $('txList').innerHTML=q.map(txHTML).join('')||'<div class="empty">Hakuna miamala inayolingana.</div>';
+}
+$('search').oninput=()=>renderList([...db.transactions].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id));
+$('date').value=new Date().toISOString().slice(0,10);
+$('txForm').onsubmit=e=>{e.preventDefault();db.transactions.push({id:Date.now(),type:$('type').value,amount:+$('amount').value,category:$('category').value.trim(),date:$('date').value,note:$('note').value.trim()});save();e.target.reset();$('date').value=new Date().toISOString().slice(0,10);render();show('transactions')};
+function delTx(id){if(confirm('Futa muamala huu?')){db.transactions=db.transactions.filter(x=>x.id!==id);save();render()}}
+function renderReport(){let m={};db.transactions.forEach(t=>{m[t.category]??={i:0,e:0};m[t.category][t.type==='income'?'i':'e']+=+t.amount});$('categoryTable').innerHTML=Object.entries(m).sort((a,b)=>(b[1].i+b[1].e)-(a[1].i+a[1].e)).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="green">${money(v.i)}</td><td class="red">${money(v.e)}</td></tr>`).join('')||'<tr><td colspan="3">Hakuna data</td></tr>'}
+function drawChart(){
+ const c=$('chart'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);
+ const now=new Date(), months=[]; for(let n=5;n>=0;n--){let d=new Date(now.getFullYear(),now.getMonth()-n,1);months.push({y:d.getFullYear(),m:d.getMonth(),label:d.toLocaleDateString('sw-TZ',{month:'short'})})}
+ const vals=months.map(x=>{let i=0,e=0;db.transactions.forEach(t=>{let d=new Date(t.date+'T00:00:00');if(d.getFullYear()===x.y&&d.getMonth()===x.m)if(t.type==='income') i+=+t.amount; else e+=+t.amount});return{i,e}});
+ const max=Math.max(1,...vals.flatMap(v=>[v.i,v.e]));const pad=55,bottom=55,top=30,usable=h-top-bottom;
+ ctx.strokeStyle='#cbd5e1';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(pad,top);ctx.lineTo(pad,h-bottom);ctx.lineTo(w-20,h-bottom);ctx.stroke();
+ const group=(w-pad-30)/months.length, bar=group*.28;
+ vals.forEach((v,idx)=>{let x=pad+group*idx+group/2;let hi=v.i/max*usable,he=v.e/max*usable;
+ ctx.fillStyle='#15803d';ctx.fillRect(x-bar-3,h-bottom-hi,bar,hi);ctx.fillStyle='#b91c1c';ctx.fillRect(x+3,h-bottom-he,bar,he);
+ ctx.fillStyle='#64748b';ctx.font='22px system-ui';ctx.textAlign='center';ctx.fillText(months[idx].label,x,h-18)});
+ ctx.fillStyle='#15803d';ctx.fillRect(w-210,18,18,18);ctx.fillStyle='#0f172a';ctx.textAlign='left';ctx.font='20px system-ui';ctx.fillText('Mapato',w-185,34);
+ ctx.fillStyle='#b91c1c';ctx.fillRect(w-95,18,18,18);ctx.fillStyle='#0f172a';ctx.fillText('Matumizi',w-70,34);
+}
+function exportCSV(){
+ let rows=[['Tarehe','Aina','Kundi','Kiasi','Maelezo'],...db.transactions.map(t=>[t.date,t.type==='income'?'Mapato':'Matumizi',t.category,t.amount,t.note||''])];
+ let csv=rows.map(r=>r.map(x=>`"${String(x).replaceAll('"','""')}"`).join(',')).join('\\n');
+ download(new Blob([csv],{type:'text/csv;charset=utf-8'}),'RAFAILU_MONEY_DIARY.csv');
+}
+function backup(){download(new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),'RAFAILU_MONEY_DIARY_backup.json')}
+$('restoreFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let x=JSON.parse(r.result);if(!x.transactions||!x.profile)throw Error();db=x;save();render();alert('Restore imefanikiwa.')}catch{alert('Backup si sahihi.')}};r.readAsText(f)};
+function download(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+function printPDF(){
+ const t=totals(),rows=[...db.transactions].sort((a,b)=>b.date.localeCompare(a.date)).map(x=>`<tr><td>${x.date}</td><td>${x.type==='income'?'Mapato':'Matumizi'}</td><td>${esc(x.category)}</td><td>${money(+x.amount)}</td><td>${esc(x.note||'')}</td></tr>`).join('');
+ const w=window.open('','_blank');if(!w){alert('Ruhusu pop-up ili kuchapisha.');return}
+ w.document.write(`<html><head><title>RAFAILU'S MONEY DIARY</title><style>body{font-family:Arial;padding:25px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:7px;font-size:12px}h1{font-size:22px}.sum{display:flex;gap:30px;margin:15px 0}</style></head><body><h1>RAFAILU'S MONEY DIARY</h1><div>${esc(db.profile.name||'')}</div><div class="sum"><b>Mapato: ${money(t.i)}</b><b>Matumizi: ${money(t.e)}</b><b>Salio: ${money(t.b)}</b></div><table><tr><th>Tarehe</th><th>Aina</th><th>Kundi</th><th>Kiasi</th><th>Maelezo</th></tr>${rows}</table><script>window.onload=()=>window.print()<\\/script></body></html>`);w.document.close();
+}
+$('profileForm').onsubmit=e=>{e.preventDefault();db.profile.name=$('profileName').value.trim();db.profile.currency=$('profileCurrency').value.trim()||'TZS';save();render();alert('Profile imehifadhiwa.')};
+$('pinForm').onsubmit=e=>{e.preventDefault();let p=$('newPin').value.trim();if(!/^\\d{4,8}$/.test(p)){alert('PIN iwe tarakimu 4 hadi 8.');return}db.pin=p;save();$('newPin').value='';alert('PIN imebadilishwa.');};
+function clearAll(){if(confirm('Futa profile, PIN na miamala yote? Hii haiwezi kurudishwa bila backup.')){localStorage.removeItem(KEY);location.reload()}}
+function unlock(){if($('loginPin').value===db.pin){$('lock').style.display='none';$('pinError').textContent=''}else $('pinError').textContent='PIN si sahihi.'}
+$('loginPin').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+$('voiceBtn').onclick=()=>{
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){$('voiceStatus').textContent='Voice-to-text haijawezeshwa kwenye browser hii. Tumia Chrome inayounga mkono Speech Recognition.';return}
+ const r=new SR();r.lang='sw-TZ';r.interimResults=false;r.maxAlternatives=1;$('voiceStatus').textContent='🎙️ Sikiliza... sema maelezo ya muamala.';
+ r.onresult=e=>{$('note').value=($('note').value+' '+e.results[0][0].transcript).trim();$('voiceStatus').textContent='Imekamilika.'};
+ r.onerror=()=>{$('voiceStatus').textContent='Voice-to-text imeshindikana. Hakikisha microphone imeruhusiwa.'};
+ r.start();
+};
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+if(!db.pin){$('lockText').textContent='Tengeneza PIN yako ya kwanza';$('lock').querySelector('.btn').onclick=()=>{let p=$('loginPin').value.trim();if(!/^\\d{4,8}$/.test(p)){$('pinError').textContent='PIN iwe tarakimu 4 hadi 8.';return}db.pin=p;save();$('lock').style.display='none';render()}}
+render();
+</script>
+</body></html>
